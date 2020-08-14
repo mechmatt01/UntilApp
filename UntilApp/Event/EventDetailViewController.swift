@@ -10,13 +10,7 @@ import UIKit
 class EventDetailViewController: UIViewController {
 
     // passed by segue
-    var event: Event? {
-        didSet {
-            
-            update();
-            _ = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(update), userInfo: nil, repeats: true)
-        }
-    }
+    var event: Event?
     let formatter = DateFormatter()
     let components = Set<Calendar.Component>([.second, .minute, .hour, .day, .month, .year])
     
@@ -28,7 +22,15 @@ class EventDetailViewController: UIViewController {
     @IBOutlet weak var eventTitle: UILabel?
     override func viewDidLoad() {
         super.viewDidLoad()
-        let imageFile = self.filePath(forKey: event!.id.uuidString);
+
+//
+        // Do any additional setup after loading the view.
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated);
+        self.navigationController?.setNavigationBarHidden(false, animated: false)
+        let imageFile = filePath(forKey: event!.id.uuidString);
         if let fileData = FileManager.default.contents(atPath: imageFile!.path) {
             let image = UIImage(data: fileData)
             let imageView = UIImageView(frame: self.view.bounds)
@@ -39,14 +41,13 @@ class EventDetailViewController: UIViewController {
             imageView.layer.zPosition = -1
             self.eventView.addSubview(imageView)
         }
-
-//
-        // Do any additional setup after loading the view.
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated);
-        self.navigationController?.setNavigationBarHidden(true, animated: animated)
+        
+        update()
+        
+        //async timer so it doesn't hang up main thread
+        let timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(update), userInfo: nil, repeats: true)
+        RunLoop.current.add(timer, forMode: .common)
+        timer.tolerance = 0.1
     }
 
     
@@ -70,25 +71,18 @@ class EventDetailViewController: UIViewController {
         
         let currentdate = Date()
         let itemsOfDate = Calendar.current.dateComponents(components, from: currentdate, to: event!.eventTime)
-
+        
         eventTitle?.text = event?.eventName
-        dayLabel?.text = "\(itemsOfDate.day!) Days"
-        hourLabel?.text = "\(itemsOfDate.hour!) Hours"
-        minuteLabel?.text = "\(itemsOfDate.minute!) Minutes"
-        secondLabel?.text = "\(itemsOfDate.second!) Seconds"
+        dayLabel?.text = "\(itemsOfDate.day!)"
+        hourLabel?.text = "\(itemsOfDate.hour!)"
+        minuteLabel?.text = "\(itemsOfDate.minute!)"
+        secondLabel?.text = "\(itemsOfDate.second!)"
     }
     @IBAction func backToMainMenu(_ sender: Any) {
+        //removes everything completely so we aren't running into a memory leak (will run into memory leak if we dont do this)
         self.navigationController?.popViewController(animated: true)
-    }
-    
-    private func filePath(forKey key: String) -> URL? {
-        let fileManager = FileManager.default
-        guard let documentURL = fileManager.urls(for: .documentDirectory,
-                                                in: FileManager.SearchPathDomainMask.userDomainMask).first else { return nil }
-        
-        return documentURL.appendingPathComponent(key + ".png")
-    }
-    @IBAction func returnToGridView(_ sender: Any) {
-        self.navigationController?.popViewController(animated: true)
+        self.eventView.removeFromSuperview()
+        self.removeFromParent()
+
     }
 }

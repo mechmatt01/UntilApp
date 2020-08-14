@@ -10,10 +10,7 @@ import UIKit
 class EventPageViewController: UIPageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
     var allViewControllers: [UIViewController] = []
     var pageControl = UIPageControl()
-    
-    @IBAction func buttonAction(_ sender: Any) {
-        print(sender.self)
-    }
+
     func configurePageControl() {
            // The total number of pages that are available is based on how many available colors we have.
            pageControl = UIPageControl(frame: CGRect(x: 0,y: UIScreen.main.bounds.maxY - 50,width: UIScreen.main.bounds.width,height: 50))

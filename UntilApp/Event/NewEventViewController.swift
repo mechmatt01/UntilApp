@@ -11,10 +11,13 @@ class NewEventViewController: UIViewController, UITextFieldDelegate, UIImagePick
     @IBOutlet weak var eventDatePicker: UIDatePicker!
     @IBOutlet weak var eventName: UITextField!
     @IBOutlet weak var backgroundPhoto: UIImageView!
+    @IBOutlet weak var newEventLabel: UILabel!
     
     let imagePicker = UIImagePickerController()
     var userImagePicked: Data?
     
+    
+    //makes sure to pass in edit stage if through a segue
     var isInEditStage = false;
     var previousEventName: String?;
     var previousEventDate: Date?;
@@ -28,24 +31,30 @@ class NewEventViewController: UIViewController, UITextFieldDelegate, UIImagePick
     }
     override func viewDidLoad() {
         super.viewDidLoad()
-        eventDatePicker.minimumDate = Date();
-        print(Date().description)
         self.eventName.delegate = self
         self.hideKeyboardWhenTappedAround()
         eventName.addTarget(self, action: #selector(clearText), for: .touchDown);
-        if(isInEditStage) {
-            self.eventDatePicker.date = previousEventDate!
-            self.eventName.text = previousEventName!
-        }
-        
         imagePicker.delegate = self
 
         // Do any additional setup after loading the view.
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        eventDatePicker.minimumDate = Date();
+        eventDatePicker.setValue(UIColor.white, forKey: "textColor")
+        if(isInEditStage) {
+            self.eventDatePicker.date = previousEventDate!
+            self.eventName.text = previousEventName!
+            self.newEventLabel.text = "Edit Event";
+        }
+        self.navigationController?.setNavigationBarHidden(true, animated: false)
+        
+    }
 
     @IBAction func createTheEvent(_ sender: Any) {
         if (!isInEditStage) {
+            //creating a new event
             let uniqueIdentifier = UUID()
             if let pngRepresentation = userImagePicked{
                 let imageFilePath = filePath(forKey: uniqueIdentifier.uuidString)
@@ -58,9 +67,9 @@ class NewEventViewController: UIViewController, UITextFieldDelegate, UIImagePick
                 }
             }
             NotificationCenter.default.post(name: Notification.Name(rawValue: "addAnEvent"), object: self, userInfo: ["eventName": eventName.text!, "eventTime": eventDatePicker.date, "uuid": uniqueIdentifier])
-            
-            self.navigationController?.popViewController(animated: true)
+            self.dismiss(animated: true, completion: nil)
         } else {
+            //editing existing event
             removeExistingImage(eventUUID: eventId!.uuidString)
             if let pngRepresentation = userImagePicked{
                 let imageFilePath = filePath(forKey: eventId!.uuidString)
@@ -73,22 +82,21 @@ class NewEventViewController: UIViewController, UITextFieldDelegate, UIImagePick
                 }
             }
             NotificationCenter.default.post(name: Notification.Name(rawValue: "changeAnEvent"), object: self, userInfo: ["eventName": eventName.text!, "eventTime": eventDatePicker.date, "uuid": eventId ?? ""])
-            popTo(HomeViewController.self)
+            
+            self.dismiss(animated: true, completion: nil)
+            self.navigationController?.popViewController(animated: true)
             
         }
         
     }
     
-    func popTo<T>(_ vc: T.Type) {
-          let targetVC = navigationController?.viewControllers.first{$0 is T}
-          if let targetVC = targetVC {
-             navigationController?.popToViewController(targetVC, animated: true)
-          }
-       }
-    
     @IBAction func backToMainMenu(_ sender: Any) {
-        popTo(HomeViewController.self)
+        
+        //runs both depending on the context of how the user managed to view this controller
+        self.dismiss(animated: true, completion: nil)
+        self.navigationController?.popViewController(animated: true)
     }
+    
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.view.endEditing(true)
         return false
@@ -111,30 +119,9 @@ class NewEventViewController: UIViewController, UITextFieldDelegate, UIImagePick
      
         dismiss(animated: true, completion: nil)
     }
-    
-    private func filePath(forKey key: String) -> URL? {
-        let fileManager = FileManager.default
-        guard let documentURL = fileManager.urls(for: .documentDirectory,
-                                                in: FileManager.SearchPathDomainMask.userDomainMask).first else { return nil }
-        
-        return documentURL.appendingPathComponent(key + ".png")
-    }
 
     
-    private func removeExistingImage(eventUUID: String) {
-        let fileManger = FileManager.default
-        let pathToFile = filePath(forKey: eventUUID)
-        if fileManger.fileExists(atPath: pathToFile!.absoluteString){
-            do{
-                print("yes file does eist")
-                try fileManger.removeItem(atPath: pathToFile!.absoluteString)
-            }catch let error {
-                print("error occurred, here are the details:\n \(error)")
-            }
-        }
-        return
-
-    }
+    
 
 }
 
